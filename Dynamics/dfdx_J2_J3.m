@@ -1,10 +1,10 @@
-function A_matrix = dfdx_wJ2J3(r, v, mu, J2, J3)
-% Outputs 9x9 for a 9d state [r,v, mu, J2, J3]
-    RE = 6378;
-    x = r(1); y = r(2); z = r(3);
-    r = norm(r);
+function A_matrix = dfdx_wJ2J3(X, mu, J2, J3)
+% Outputs 6x6 for a 6d state [x; y; z; vx; vy; vz]
+    RE = Constants.RE;
+    x = X(1); y = X(2); z = X(3);
+    r = norm(X(1:3));
 
-    A_matrix = zeros(9);
+    A_matrix = zeros(length(X));
 
     % drdot/dv = I
     A_matrix(1:3,4:6) = eye(3);
@@ -36,23 +36,5 @@ function A_matrix = dfdx_wJ2J3(r, v, mu, J2, J3)
     A_matrix(6,3) = mu*(3*z^2/r^5 - 1/r^3) + ...
         3/2*J2*RE^2*mu/r^5 * (30*z^2/r^2 - 35*z^4/r^4 - 3) + ...
         5/2*mu*J3*RE^3/r^7 * (70*z^3/r^2 - 63*z^5/r^4 - 15*z);
-
-    %da/dmu
-    A_matrix(4,7) = -x/r^3 + 3/2*J2*RE^2*(5*z^2/r^7 - 1/r^5)*x + ...
-        1/2*J3*RE^3*(35*z^3/r^9 - 15*z/r^7)*x;
-    A_matrix(5,7) = -y/r^3 + 3/2*J2*RE^2*(5*z^2/r^7 - 1/r^5)*y + ...
-        1/2*J3*RE^3*(35*z^3/r^9 - 15*z/r^7)*y;
-    A_matrix(6,7) = -z/r^3 + 3/2*J2*RE^2*(5*z^2/r^7 - 3/r^5)*z + ...
-        1/2*J3*RE^3*(35*z^4/r^9 - 30*z^2/r^7 + 3/r^5);
-
-    %da/dJ2
-    A_matrix(4,8) = 3/2*mu*RE^2*(5*z^2/r^7 - 1/r^5)*x;
-    A_matrix(5,8) = 3/2*mu*RE^2*(5*z^2/r^7 - 1/r^5)*y;
-    A_matrix(6,8) = 3/2*mu*RE^2*(5*z^2/r^7 - 3/r^5)*z;
-
-    %da/dJ3
-    A_matrix(4,9) = 1/2*mu*RE^3*(35*z^3/r^9 - 15*z/r^7)*x;
-    A_matrix(5,9) = 1/2*mu*RE^3*(35*z^3/r^9 - 15*z/r^7)*y;
-    A_matrix(6,9) = 1/2*mu*RE^3*(35*z^4/r^9 - 30*z^2/r^7 + 3/r^5);
 
 end
