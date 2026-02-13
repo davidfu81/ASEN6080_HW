@@ -10,15 +10,19 @@ X0 = oscelt2cart(sma, ecc, inc, raan, argp, tanom, Constants.MU);
 
 dx0 = [1; -1; 0; 0.001; 0; -0.001];
 
+params = struct('mu', Constants.MU, 'J2', Constants.J2, 'J3', Constants.J3);
+
 period = 2*pi*sqrt(sma^3/Constants.MU);
 teval = 0:10:period*15;
+
+model = DynamicsModel_J2J3(params, 6); 
 tic
-Xhist = integrate_J2_J3(teval, X0+dx0, Constants.MU, Constants.J2, 0);
+Xhist = model.integrate_eom(teval, X0+dx0);
 toc
 
 %%
 tic
-[Xref, Phi] = integrate_J2wPhi(teval, X0, Constants.MU, Constants.J2);
+[Xref, Phi] = model.integrate_eomwPhi(teval, X0);
 toc
 
 XhistPhi = zeros([length(X0),length(teval)]);

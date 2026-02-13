@@ -1,6 +1,9 @@
-function A_matrix = dfdx_wJ2J3(X, mu, J2, J3)
+function A_matrix = dfdx_J2_J3(X, params)
 % Outputs 6x6 for a 6d state [x; y; z; vx; vy; vz]
     RE = Constants.RE;
+    mu = params.mu;
+    J2 = params.J2;
+    J3 = params.J3;
     x = X(1); y = X(2); z = X(3);
     r = norm(X(1:3));
 

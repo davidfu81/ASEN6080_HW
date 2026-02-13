@@ -1,6 +1,9 @@
-function dXdt = ode_J2_J3(t, X, mu, J2, J3)
+function dXdt = ode_J2_J3(t, X, params)
     % X = [r; v]
     RE = Constants.RE;
+    mu = params.mu;
+    J2 = params.J2;
+    J3 = params.J3;
     
     dXdt = zeros(size(X));
 

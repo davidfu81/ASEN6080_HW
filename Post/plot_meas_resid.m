@@ -1,5 +1,5 @@
 % Utility function to plot measurement residuals
-function [fig_resid, ax_resid] = plot_meas_resid(tdata, yresid, title_str, ...
+function [fig_resid, ax_resid, rms_resid] = plot_meas_resid(tdata, yresid, title_str, ...
     components, units, stations)
     if nargin < 4
         components = ["Range", "Range-Rate"];
@@ -14,6 +14,7 @@ function [fig_resid, ax_resid] = plot_meas_resid(tdata, yresid, title_str, ...
     tl = tiledlayout(length(components),1);
     tl.TileSpacing = 'compact';
     tl.Padding = 'loose';
+    rms_resid = zeros([length(components),1]);
     
     for i = 1:length(components)
         ax_resid(i) = nexttile;
@@ -26,8 +27,8 @@ function [fig_resid, ax_resid] = plot_meas_resid(tdata, yresid, title_str, ...
             scatter(tdata, yresid(i,:,j), 4)
         end
         ylabel(sprintf("%s [%s]", components(i), units(i)))
-        rms_resid = sqrt(sum(sum(yresid(i,~isnan(yresid(i,:,:))).^2))/length(tdata));
-        title(sprintf("RMS: %.3e %s", rms_resid, units(i) ))
+        rms_resid(i) = sqrt(sum(sum(yresid(i,~isnan(yresid(i,:,:))).^2))/length(tdata));
+        title(sprintf("RMS: %.3e %s", rms_resid(i), units(i) ))
     end
     xlabel("Time [s]")
     lgd_labels = strings([1, size(yresid, 3)]);
