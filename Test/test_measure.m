@@ -20,16 +20,18 @@ for i = 1:3
     Rsi(:,i) = lla2ecef([station_lats(i), station_longs(i), 0])';
 end
 
-for k = 1:3
-    Yref = G_rho_rhod_el(0, X0, Rsi(:,k), zeros(2));
-    for i = 1:length(alpha)
-        X = X0+alpha(i)*dx0;
-        Ynonlin(:,i,k) = G_rho_rhod_el(0, X, Rsi(:,k), zeros(2));
-        
-        Htilde = Htilde_sc_rho_rhod(0, X0, Rsi(:,k));
-        Ylin(:,i,k) = Yref + Htilde*alpha(i)*dx0;
-    end
+measure_model = MeasurementModel_RRR(Rsi, 6);
+
+
+for i = 1:length(alpha)
+    X = X0+alpha(i)*dx0;
+    Yref = measure_model.measure(0, X0, [1,2,3], zeros(2));
+    Htilde = measure_model.Htilde(0, X0, [1,2,3]);
+    Ylin(:,i,:) = reshape(Yref + Htilde*alpha(i)*dx0, [2,1,3]);
+
+    Ynonlin(:,i,:) = reshape(measure_model.measure(0, X, [1,2,3], zeros(2)), [2,1,3]);
 end
+
 
 
 close all

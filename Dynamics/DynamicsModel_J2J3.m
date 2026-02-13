@@ -1,5 +1,5 @@
 classdef DynamicsModel_J2J3 < DynamicsModel
-
+    % Dynamics model that includes J2 and J3 perturbations
 
     methods (Access = public)
         function obj = DynamicsModel_J2J3(dyn_params, n_state)
