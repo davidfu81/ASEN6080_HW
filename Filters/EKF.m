@@ -1,20 +1,21 @@
-function [Xhist, Phist] = EKF(tdata, Ydata, Phat0, Xref0, mu, J2, Xs, R, ckf_meas_num)
-    if nargin < 9
+function [Xhist, Phist, dYpre, dYpost] = EKF(tdata, Ydata, Xref0, Phat0, Rsi, R, mu, J2, ckf_meas_num)
+    if nargin < 8
         ckf_meas_num = 0;
     end
-
-    Xhist = zeros([6,length(tdata)]);
-    Phist = zeros([6,6,length(tdata)]);
-    opts = odeset('RelTol',1e-9, 'AbsTol', 1e-9);
+    n_state = length(Xref0);
+    Xhist = zeros([n_state,length(tdata)]);
+    Phist = zeros([n_state,n_state,length(tdata)]);
+    dYpre = nan(size(Ydata));
+    dYpost = nan(size(Ydata));
 
      % Initialize with warm start
     if ckf_meas_num > 0
         last_obs = find(~all(isnan(Ydata(1,:,:)), 3), ckf_meas_num);
         last_obs = last_obs(end);
 
-        [Xhist(:,1:last_obs), Phist(:,:,1:last_obs)] = CKF( ...
-            tdata(1:last_obs), Ydata(:,1:last_obs,:), zeros([6,1]), ...
-            Phat0, Xref0, mu, J2, Xs, R);
+        [Xhist(:,1:last_obs), Phist(:,:,1:last_obs), dYpre(:,1:last_obs,:), dYpost(:,1:last_obs,:)] = CKF( ...
+            tdata(1:last_obs), Ydata(:,1:last_obs,:), ...
+            Xref0, Phat0, Rsi, R, mu, J2, 1);
 
         iprev = last_obs;
         Xstar_prev = Xhist(:,last_obs);
@@ -35,37 +36,41 @@ function [Xhist, Phist] = EKF(tdata, Ydata, Phat0, Xref0, mu, J2, Xs, R, ckf_mea
     for icurr = obs_ind
 
         % Integrate Trajectory
-        Xaug0 = [Xstar_prev; J2; reshape(eye(7), [49,1])];
-        sol_ref = ode45(@(t,y) keplerJ2_wPhi_ODE(t,y,mu), ...
-            [tdata(iprev),tdata(icurr)], Xaug0, opts);
+        [Xref, Phi] = integrate_J2wPhi(tdata(iprev:icurr), Xstar_prev, mu, J2);
         
         % Time update from previous observation
         j = 1;
-        Xaug = deval(sol_ref, tdata(iprev+1:icurr));
         while j + iprev < icurr
-            Phi = reshape(Xaug(8:end, j), [7,7]);
-            Phi = Phi(1:6, 1:6);
-
-            Xhist(:,iprev+j) = Xaug(1:6,j);
-            Phist(:,:,iprev+j) = Phi*Phat_prev*Phi';
+            Xhist(:,iprev+j) = Xref(:,j+1);
+            Phist(:,:,iprev+j) = Phi(:,:,j+1)*Phat_prev*Phi(:,:,j+1)';
             j = j+1;
         end
-        Phi = reshape(Xaug(8:end, end), [7,7]);
-        Phi = Phi(1:6, 1:6);
-        Pbar = Phi*Phat_prev*Phi';
-        Xstar = Xaug(1:6, end);
+        Pbar = Phi(:,:,end)*Phat_prev*Phi(:,:,end)';
+        Xstar = Xref(:, end);
 
         % Measurement Update
-        vis_ind = find(~isnan(Ydata(1,icurr,:)));     
-        Y = Ydata(:,icurr, vis_ind);
-        [rho, rhod] = G_rho_rhod_el(Xstar, Xs(:,icurr, vis_ind));
-        dy = Y- [rho; rhod];
-        Htilde = Htilde_sc_rho_rhod(Xstar(1:3), Xstar(4:6), ...
-            Xs(1:3,icurr, vis_ind), Xs(4:6,icurr, vis_ind));
-        K = Pbar*Htilde'/(Htilde*Pbar*Htilde' + R);
+            % Identify visible stations
+            stations = find(~isnan(Ydata(1,icurr,:)));
+            num_station = length(stations);
 
-        dxhat = K*dy;
-        Phat = (eye(6) - K*Htilde)*Pbar;
+            Y = reshape(Ydata(:,icurr,stations), [2*num_station,1]);
+            Ystar = G_rho_rhod_el(tdata(icurr), Xstar, Rsi(:,stations), zeros(2));
+
+            Htilde = Htilde_sc_rho_rhod(tdata(icurr), Xstar, Rsi(:,stations));
+            
+            Raug = kron(eye(num_station), R);
+
+            dy = Y - Ystar;
+            dYpre(:,icurr,stations) = reshape(dy, [2,1,num_station]);
+            K = Pbar*Htilde'/(Htilde*Pbar*Htilde' + Raug);
+            dxhat = K*dy;
+
+            M = (eye(n_state) - K*Htilde);
+            Phat = M*Pbar*M' + K*Raug*K';
+
+            % Post-fit residuals
+            dYpost(:,icurr,stations) = reshape(dy - Htilde* dxhat, [2,1,num_station]);
+          
 
         % Record estimates and update for next iteration
         Xhist(:,icurr) = Xstar + dxhat;
@@ -78,17 +83,15 @@ function [Xhist, Phist] = EKF(tdata, Ydata, Phat0, Xref0, mu, J2, Xs, R, ckf_mea
 
     % Finish time update for rest of time if needed
     if iprev < length(tdata)
-        Xaug0 = [Xstar_prev; J2; reshape(eye(7), [49,1])];
-        sol_ref = ode45(@(t,y) keplerJ2_wPhi_ODE(t,y,mu), ...
-                [tdata(iprev),tdata(end)], Xaug0, opts);
-        j = 1;
-        Xaug = deval(sol_ref, tdata(iprev+1:end));
-        while j + iprev <= length(tdata)
-            Phi = reshape(Xaug(8:end, j), [7,7]);
-            Phi = Phi(1:6, 1:6);
+        % Integrate Trajectory
+        [Xref, Phi] = integrate_J2wPhi(tdata(iprev+1:icurr), Xstar_prev, mu, J2);
 
-            Xhist(:,iprev+j) = Xaug(1:6,j);
-            Phist(:,:,iprev+j) = Phi*Phat_prev*Phi';
+        
+        % Time update from previous observation
+        j = 1;
+        while j + iprev <= length(tdata)
+            Xhist(:,iprev+j) = Xref(:,j);
+            Phist(:,:,iprev+j) = Phi(:,:,j)*Phat_prev*Phi(:,:,j)';
             j = j+1;
         end
     end

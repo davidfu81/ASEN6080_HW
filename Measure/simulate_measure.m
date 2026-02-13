@@ -1,20 +1,23 @@
-function [Y, Xs_all] = simulate_measure(tref, Xref, ...
-    station_lats, station_longs, theta0deg, R)
-    
-    if nargin < 6
+function Y = simulate_measure(teval, Xeval, Rsi, R)
+    %%%%
+    % Simulate nonlinear measurements for a whole trajectory
+    %  X = [x; y; z; vx; vy; vz; ... ]
+    % Rsi = [Rs1, Rs2, ...] in ECEF
+    %%%% 
+    if nargin < 3
         R = zeros(2);
     end
-
-    Y = zeros(2, length(tref), 3);
-    Xs_all = zeros(6, length(tref), 3);
     
-    for i = 1:3
-        Xs = station_traj(tref, station_lats(i), station_longs(i), theta0deg);
-        [rho, rhod, el] = G_rho_rhod_el(Xref, Xs, R);
-        Y(:,:,i) = [rho; rhod];
+    num_stations = size(Rsi, 2);
+    Y = nan(2, length(teval), num_stations);
     
-        el_mask = el >= 10;
-        Y(:, ~el_mask, i) = nan;
-        Xs_all(:,:,i) = Xs;
+    for i = 1:num_stations
+        for k = 1:length(teval)
+            [Y_rho_rhod, Y_el] = G_rho_rhod_el(teval(k), ...
+                Xeval(:,k), Rsi(:,i), R);
+            if Y_el >= 10
+                Y(:,k,i) = Y_rho_rhod;
+            end
+        end
     end
 end
