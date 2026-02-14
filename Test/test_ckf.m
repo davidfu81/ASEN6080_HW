@@ -26,19 +26,37 @@ for i = 1:3
     Rsi(:,i) = lla2ecef([station_lats(i), station_longs(i), 0])/1000';
 end
 
-period = 2*pi*sqrt(sma^3/mu);
-teval = 0:10:period*5;
+
+params = struct('mu', Constants.MU, 'J2', Constants.J2, 'J3', 0);
+
+period = 2*pi*sqrt(sma^3/Constants.MU);
+teval = 0:10:period*15;
+
+dyn_model = DynamicsModel_J2J3(params, 6);
+meas_model = MeasurementModel_RRR(Rsi, 6);
+
 tic
-Xhist = integrate_J2_J3(teval, X0+dx0, mu, J2, 0);
-Ydata = simulate_measure(teval, Xhist, Rsi, R);
+Xhist = dyn_model.integrate_eom(teval, X0+dx0);
+Ydata = meas_model.simulate_measure(teval, Xhist, R, 10);
 toc
 
-
+ckf = Filter_CKF(dyn_model, meas_model);
 tic
-[Xest, Pest, dYpre, dYpost] = CKF(teval, Ydata, X0, Phat0,  Rsi, R, mu, J2, 1);
+[Xest, Pest, dYpre, dYpost] = ckf.run_filter(teval, Ydata, X0, Phat0, R, 1);
 toc
 %%
 close all
+plot_filter_error(teval, Xest, Pest, Xhist, "CKF Filter Error")
+for i = 1:size(dYpre,4)
+    plot_meas_resid(teval, dYpre(:,:,:,i), sprintf("Pre-Fit Residuals: Iteration %d", i))
+    plot_meas_resid(teval, dYpost(:,:,:,i), sprintf("Post-Fit Residuals: Iteration %d", i))
+
+end
+%%
+tic
+[Xest, Pest, dYpre, dYpost] = CKF(teval, Ydata, X0, Phat0, dyn_model, meas_model, R, 1);
+toc
+
 plot_filter_error(teval, Xest, Pest, Xhist, "CKF Filter Error")
 for i = 1:size(dYpre,4)
     plot_meas_resid(teval, dYpre(:,:,:,i), sprintf("Pre-Fit Residuals: Iteration %d", i))

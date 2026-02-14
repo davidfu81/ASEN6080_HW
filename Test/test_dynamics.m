@@ -49,3 +49,5 @@ for i = 1:6
     plot(teval(1:stop)/period, Xhist(i,1:stop) - XhistPhi(i,1:stop))
 end
 sgtitle("Nonlinear Integration vs Integrated STM")
+
+%%

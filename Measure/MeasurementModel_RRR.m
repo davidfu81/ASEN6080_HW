@@ -94,8 +94,8 @@ classdef MeasurementModel_RRR < MeasurementModel
             
             for i = 1:num_stations
                 for k = 1:length(teval)
-                    [Y_rho_rhod, Y_el] = G_rho_rhod_el(teval(k), ...
-                        Xeval(:,k), k, R);
+                    [Y_rho_rhod, Y_el] = obj.measure(teval(k), ...
+                        Xeval(:,k), i, R);
                     if Y_el >= min_el
                         Y(:,k,i) = Y_rho_rhod;
                     end

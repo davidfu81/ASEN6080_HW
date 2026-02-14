@@ -1,4 +1,4 @@
-function [Xhist, Phist, dYpre, dYpost] = CKF(tdata, Ydata, Xref0, Phat0, Rsi, R, mu, J2, num_iter)
+function [Xhist, Phist, dYpre, dYpost] = CKF(tdata, Ydata, Xref0, Phat0, dyn_model, meas_model, R, num_iter)
 
     % Initialize
     Xhist = zeros([length(Xref0),length(tdata)]);
@@ -15,7 +15,7 @@ function [Xhist, Phist, dYpre, dYpost] = CKF(tdata, Ydata, Xref0, Phat0, Rsi, R,
         Phat_prev = Phat0;
     
         % Integrate refrence trajectory with STM
-        [Xref, Phiref] = integrate_J2wPhi(tdata, X0, mu, J2);
+        [Xref, Phiref] = dyn_model.integrate_eomwPhi(tdata, X0);
     
         % Iterate through observations
         for i = 1:length(tdata)
@@ -33,9 +33,11 @@ function [Xhist, Phist, dYpre, dYpost] = CKF(tdata, Ydata, Xref0, Phat0, Rsi, R,
             stations = find(~isnan(Ydata(1,i,:)));
             if ~isempty(stations)
                 Y = reshape(Ydata(:,i,stations), [2*length(stations),1]);
-                Ystar = G_rho_rhod_el(tdata(i), Xref(:,i), Rsi(:,stations), zeros(2));
+                % Ystar = G_rho_rhod_el(tdata(i), Xref(:,i), Rsi(:,stations), zeros(2));
+                Ystar = meas_model.measure(tdata(i), Xref(:,i), stations, zeros(2));
     
-                Htilde = Htilde_sc_rho_rhod(tdata(i), Xref(:,i), Rsi(:,stations));
+                % Htilde = Htilde_sc_rho_rhod(tdata(i), Xref(:,i), Rsi(:,stations));
+                Htilde = meas_model.Htilde(tdata(i), Xref(:,i), stations);
                 
                 Raug = kron(eye(length(stations)), R);
     
