@@ -1,6 +1,10 @@
 classdef DynamicsModel_J2J3 < DynamicsModel
     % Dynamics model that includes J2 and J3 perturbations
+    properties
+        n_state
 
+        dyn_params
+    end
     methods (Access = public)
         function obj = DynamicsModel_J2J3(dyn_params, n_state)
             obj.n_state = n_state;
@@ -33,6 +37,10 @@ classdef DynamicsModel_J2J3 < DynamicsModel
             for i = 1:length(teval)
                 Phi(:,:,i) = reshape(Xaug(obj.n_state+1:end,i), [obj.n_state,obj.n_state]);
             end
+        end
+
+        function Q = process_noise_covariance(obj, ~)
+            Q = zeros(obj.n_state);
         end
     end
 
@@ -122,6 +130,8 @@ classdef DynamicsModel_J2J3 < DynamicsModel
         
             dXaugdt(obj.n_state+1:end) = reshape(phidot, [obj.n_state^2,1]);
         end
+
+        
     end
 
 

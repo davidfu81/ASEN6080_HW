@@ -1,12 +1,7 @@
 classdef (Abstract) Filter
 
     properties
-        % Dynamics Model Object
-        dyn_model
 
-        % Measurement Model Object
-        meas_model
-        
     end
 
     methods (Abstract)

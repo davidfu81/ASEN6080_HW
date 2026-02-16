@@ -27,7 +27,7 @@ function [fig_resid, ax_resid, rms_resid] = plot_meas_resid(tdata, yresid, title
             scatter(tdata, yresid(i,:,j), 4)
         end
         ylabel(sprintf("%s [%s]", components(i), units(i)))
-        rms_resid(i) = sqrt(sum(sum(yresid(i,~isnan(yresid(i,:,:))).^2))/length(tdata));
+        rms_resid(i) = sqrt(mean(yresid(i,:,:).^2, [2, 3], 'omitnan'));
         title(sprintf("RMS: %.3e %s", rms_resid(i), units(i) ))
     end
     xlabel("Time [s]")

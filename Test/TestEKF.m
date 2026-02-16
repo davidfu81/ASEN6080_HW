@@ -22,9 +22,9 @@ classdef TestEKF < matlab.unittest.TestCase
             dyn_model = DynamicsModel_J2J3(params, 6);
             meas_model = MeasurementModel_RRR(Rsi, 6);
 
-            ekf = Filter_EKF(dyn_model, meas_model);
+            ekf = Filter_EKF();
             
-            [Xest_out, Pest_out, dYpre_out, dYpost_out] = ekf.run_filter(teval, Ydata, X0, Phat0, R, 0);
+            [Xest_out, Pest_out, dYpre_out, dYpost_out] = ekf.run_filter(teval, Ydata, X0, Phat0, dyn_model, meas_model, R, 0);
             
 
             testCase.verifyEqual(Xest_out(1:3,:), Xest(1:3,:), 'RelTol', 1e-9, 'AbsTol', 1e-6)

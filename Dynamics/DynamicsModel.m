@@ -1,11 +1,6 @@
-classdef (Abstract) DynamicsModel
+classdef (Abstract) DynamicsModel < handle
     % Base class for dynamics models
     
-    properties
-        n_state
-
-        dyn_params
-    end
     
     methods (Abstract)
         % Integrate equations of motion
@@ -13,6 +8,9 @@ classdef (Abstract) DynamicsModel
 
         % Integrate equations of motion with STM
         integrate_eomwPhi(obj, teval, X0)
+
+        % Get process noise covariance inflation
+        process_noise_covariance(obj) 
 
     end
 end

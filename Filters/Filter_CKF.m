@@ -1,12 +1,11 @@
 classdef Filter_CKF < Filter
 
     methods
-        function obj = Filter_CKF(dyn_model, meas_model)
-            obj.dyn_model = dyn_model;
-            obj.meas_model = meas_model;
+        function obj = Filter_CKF()
+
         end
 
-        function [Xhist, Phist, dYpre, dYpost] = run_filter(obj, tdata, Ydata, Xref0, Phat0, R, num_iter)
+        function [Xhist, Phist, dYpre, dYpost] = run_filter(~, tdata, Ydata, Xref0, Phat0, dyn_model, meas_model, R, num_iter)
             % Initialize
             Xhist = zeros([length(Xref0),length(tdata)]);
             Phist = zeros([length(Xref0),length(Xref0),length(tdata)]);
@@ -22,27 +21,29 @@ classdef Filter_CKF < Filter
                 Phat_prev = Phat0;
             
                 % Integrate refrence trajectory with STM
-                [Xref, Phiref] = obj.dyn_model.integrate_eomwPhi(tdata, X0);
+                [Xref, Phiref] = dyn_model.integrate_eomwPhi(tdata, X0);
             
                 % Iterate through observations
                 for i = 1:length(tdata)
                     % Time Update
                     if i == 1
                         Phi = Phiref(1:6,1:6,i);
+                        dt = 0;
                     else
                         Phi = Phiref(1:6,1:6,i)/Phiref(1:6,1:6,i-1);
+                        dt = tdata(i) - tdata(i-1);
                     end
                     dxbar = Phi*dxhat_prev;
-                    Pbar = Phi*Phat_prev*Phi';
+                    Pbar = Phi*Phat_prev*Phi' + dyn_model.process_noise_covariance(dt);
             
                     % Measurement Update
                     % Identify visible stations
                     stations = find(~isnan(Ydata(1,i,:)));
                     if ~isempty(stations)
                         Y = reshape(Ydata(:,i,stations), [2*length(stations),1]);
-                        Ystar = obj.meas_model.measure(tdata(i), Xref(:,i), stations, zeros(2));
+                        Ystar = meas_model.measure(tdata(i), Xref(:,i), stations, zeros(2));
             
-                        Htilde = obj.meas_model.Htilde(tdata(i), Xref(:,i), stations);
+                        Htilde = meas_model.Htilde(tdata(i), Xref(:,i), stations);
                         
                         Raug = kron(eye(length(stations)), R);
             
