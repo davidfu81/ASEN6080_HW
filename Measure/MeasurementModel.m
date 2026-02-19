@@ -2,8 +2,8 @@ classdef (Abstract) MeasurementModel
 
     properties
 
-        % Number of scalars expected in state vector
-        n_state
+        % Measurement noise
+        R
 
     end
 

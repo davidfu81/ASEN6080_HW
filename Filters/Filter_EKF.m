@@ -5,7 +5,7 @@ classdef Filter_EKF < Filter
 
         end
 
-        function [Xhist, Phist, dYpre, dYpost] = run_filter(~, tdata, Ydata, Xref0, Phat0, dyn_model, meas_model, R, ckf_meas_num)
+        function [Xhist, Phist, dYpre, dYpost] = run_filter(~, tdata, Ydata, Xref0, Phat0, dyn_model, meas_model, ckf_meas_num)
 
             n_state = length(Xref0);
             Xhist = zeros([n_state,length(tdata)]);
@@ -62,11 +62,11 @@ classdef Filter_EKF < Filter
                     num_station = length(stations);
         
                     Y = reshape(Ydata(:,icurr,stations), [2*num_station,1]);
-                    Ystar = meas_model.measure(tdata(icurr), Xstar, stations, zeros(2));
+                    Ystar = meas_model.measure(tdata(icurr), Xstar, stations);
         
                     Htilde = meas_model.Htilde(tdata(icurr), Xstar, stations);
                     
-                    Raug = kron(eye(num_station), R);
+                    Raug = kron(eye(num_station), meas_model.R);
         
                     dy = Y - Ystar;
                     dYpre(:,icurr,stations) = reshape(dy, [2,1,num_station]);

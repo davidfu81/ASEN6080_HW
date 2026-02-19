@@ -16,17 +16,17 @@ classdef TestMeasure < matlab.unittest.TestCase
             addpath("./..")
 
             
-            measure_model = MeasurementModel_RRR(Rsi, 6);
+            measure_model = MeasurementModel_RRR(Rsi, zeros(2));
             Ynonlin_out = zeros([2, length(alpha),3]);
             Ylin_out = Ynonlin_out;
             
             for i = 1:length(alpha)
                 X = X0+alpha(i)*dx0;
-                Yref = measure_model.measure(0, X0, [1,2,3], zeros(2));
+                Yref = measure_model.measure(0, X0, [1,2,3]);
                 Htilde = measure_model.Htilde(0, X0, [1,2,3]);
                 Ylin_out(:,i,:) = reshape(Yref + Htilde*alpha(i)*dx0, [2,1,3]);
             
-                Ynonlin_out(:,i,:) = reshape(measure_model.measure(0, X, [1,2,3], zeros(2)), [2,1,3]);
+                Ynonlin_out(:,i,:) = reshape(measure_model.measure(0, X, [1,2,3]), [2,1,3]);
             end
 
             testCase.verifyEqual(Ynonlin_out(1,:), Ynonlin(1,:), 'RelTol', 1e-9, 'AbsTol', 1e-6)

@@ -16,7 +16,7 @@ classdef DynamicsModel_J2J3 < DynamicsModel
             end
 
             opts = odeset('RelTol',1e-12, 'AbsTol', 1e-9);
-            sol = ode45(@(t,y) obj.ode(t,y), [teval(1), teval(end)], X0, opts);
+            sol = ode45(@(t,y) obj.eom(t,y), [teval(1), teval(end)], X0, opts);
             Xsim = deval(sol, teval);
         end
 
@@ -28,7 +28,7 @@ classdef DynamicsModel_J2J3 < DynamicsModel
             opts = odeset('RelTol',1e-12, 'AbsTol', 1e-9);
 
             Phi0 = eye(obj.n_state);
-            sol = ode45(@(t,y) obj.odewPhi(t,y), ...
+            sol = ode45(@(t,y) obj.eomwPhi(t,y), ...
                 [teval(1), teval(end)], [X0; reshape(Phi0, [obj.n_state^2,1])], opts);
             Xaug = deval(sol, teval);
             Xsim = Xaug(1:obj.n_state,:);
@@ -39,13 +39,11 @@ classdef DynamicsModel_J2J3 < DynamicsModel
             end
         end
 
-        function Q = process_noise_covariance(obj, ~)
+        function Q = process_noise_covariance(obj, ~, ~)
             Q = zeros(obj.n_state);
         end
-    end
 
-    methods (Access = private)
-        function dXdt = ode(obj, t, X)
+        function dXdt = eom(obj, t, X)
             % X = [r; v]
             RE = Constants.RE;
             mu = obj.dyn_params.mu;
@@ -73,7 +71,7 @@ classdef DynamicsModel_J2J3 < DynamicsModel
 
         function A_matrix = dfdx(obj, X)
         % Outputs 6x6 for a 6d state [x; y; z; vx; vy; vz]
-            RE = Constants.RE;
+            RE = obj.dyn_params.RE;
             mu = obj.dyn_params.mu;
             J2 = obj.dyn_params.J2;
             J3 = obj.dyn_params.J3;
@@ -115,14 +113,14 @@ classdef DynamicsModel_J2J3 < DynamicsModel
         
         end
 
-        function dXaugdt = odewPhi(obj, t, Xaug)
+        function dXaugdt = eomwPhi(obj, t, Xaug)
             %%%%%%
             % Xaug is length (n^2 + n) where n is number of states
             %%%%%%
         
             dXaugdt = zeros(size(Xaug));
         
-            dXaugdt(1:6) = obj.ode(t, Xaug(1:obj.n_state));
+            dXaugdt(1:6) = obj.eom(t, Xaug(1:obj.n_state));
 
             phi = reshape(Xaug(obj.n_state+1:end), [obj.n_state, obj.n_state]);
             A = obj.dfdx(Xaug(1:obj.n_state));

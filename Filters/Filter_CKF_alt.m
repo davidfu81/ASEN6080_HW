@@ -1,12 +1,11 @@
 classdef Filter_CKF_alt < Filter
 
     methods
-        function obj = Filter_CKF_alt(dyn_model, meas_model)
-            obj.dyn_model = dyn_model;
-            obj.meas_model = meas_model;
+        function obj = Filter_CKF_alt()
+           
         end
-
-        function [Xhist, Phist, dYpre, dYpost] = run_filter(obj, tdata, Ydata, Xref0, Phat0, R)
+        % Iteration not currently implemented
+        function [Xhist, Phist, dYpre, dYpost] = run_filter(~, tdata, Ydata, Xref0, Phat0, dyn_model, meas_model, num_iter)
 
             n_state = length(Xref0);
             Xhist = zeros([n_state,length(tdata)]);
@@ -19,51 +18,64 @@ classdef Filter_CKF_alt < Filter
             dxhat_prev = zeros([n_state,1]);
             iprev = 1;
             
-            Xhist(:,1) = Xref0;
-            Phist(:,:,1) = Phat0;
+            % Will be overwritten if there is a measurement at t = 0
+            Xhist(:,1) = Xstar_prev;
+            Phist(:,:,1) = Phat_prev;
         
             % Find observation arcs
-            obs_ind = find(~all(isnan(Ydata(1,iprev+1:end,:)), 3))+iprev;
+            obs_ind = find(~all(isnan(Ydata(1,:,:)), 3));
         
             % Iterate through observations
             for icurr = obs_ind
-        
-                % Integrate Trajectory
-                [Xref, Phi] = obj.dyn_model.integrate_eomwPhi(tdata(iprev:icurr), Xstar_prev);
-                
-                % Time update from previous observation
-                j = 1;
-                while j + iprev < icurr
-                    Xhist(:,iprev+j) = Xref(:,j+1);
-                    Phist(:,:,iprev+j) = Phi(:,:,j+1)*Phat_prev*Phi(:,:,j+1)';
-                    j = j+1;
-                end
-                dxbar = Phi(:,:,end)*dxhat_prev;
-                Pbar = Phi(:,:,end)*Phat_prev*Phi(:,:,end)';
-                Xstar = Xref(:, end);
-        
-                % Measurement Update
-                    % Identify visible stations
-                    stations = find(~isnan(Ydata(1,icurr,:)));
-                    num_station = length(stations);
-        
-                    Y = reshape(Ydata(:,icurr,stations), [2*num_station,1]);
-                    Ystar = obj.meas_model.measure(tdata(icurr), Xstar, stations, zeros(2));
-        
-                    Htilde = obj.meas_model.Htilde(tdata(icurr), Xstar, stations);
+                % No time update if measurement at t = 0
+                if icurr == 1
+                    Pbar = Phat_prev;
+                    dxbar = dxhat_prev;
+                    Xstar = Xstar_prev;
                     
-                    Raug = kron(eye(num_station), R);
-        
-                    dy = Y - Ystar;
-                    dYpre(:,icurr,stations) = reshape(dy, [2,1,length(stations)]);
-                    K = Pbar*Htilde'/(Htilde*Pbar*Htilde' + Raug);
-                    dxhat = dxbar + K*(dy - Htilde*dxbar);
-        
-                    M = (eye(length(Xref0)) - K*Htilde);
-                    Phat = M*Pbar*M' + K*Raug*K';
-        
-                    % Post-fit residuals
-                    dYpost(:,icurr,stations) = reshape(dy - Htilde* dxhat, [2,1,num_station]);
+                % Time update
+                else
+                    % Integrate Trajectory
+                    [Xref, Phiref] = dyn_model.integrate_eomwPhi(tdata(iprev:icurr), Xstar_prev);
+                    
+                    % Time update from previous observation
+                    j = 1;
+                    while j + iprev < icurr
+                        Xhist(:,iprev+j) = Xref(:,j+1);
+                        Phi = Phiref(:,:,j+1)/Phiref(:,:,j);
+                        Phist(:,:,iprev+j) = Phi*Phist(:,:,iprev+j-1)*Phi' + ...
+                            dyn_model.process_noise_covariance(tdata(iprev+j)-tdata(iprev+j-1), Xref(:,j));
+                        j = j+1;
+                    end
+                    dxbar = Phiref(:,:,end)*dxhat_prev;
+                    Phi = Phiref(:,:,end)/Phiref(:,:,end-1);
+                    Pbar = Phi*Phist(:,:,icurr-1)*Phi' + ...
+                         dyn_model.process_noise_covariance(tdata(icurr)-tdata(icurr-1), Xref(:,end-1));
+                    Xstar = Xref(:, end);
+            
+                end
+                % Measurement Update
+                % Identify visible stations
+                stations = find(~isnan(Ydata(1,icurr,:)));
+                num_station = length(stations);
+    
+                Y = reshape(Ydata(:,icurr,stations), [2*num_station,1]);
+                Ystar = meas_model.measure(tdata(icurr), Xstar, stations);
+    
+                Htilde = meas_model.Htilde(tdata(icurr), Xstar, stations);
+                
+                Raug = kron(eye(num_station), meas_model.R);
+    
+                dy = Y - Ystar;
+                dYpre(:,icurr,stations) = reshape(dy, [2,1,length(stations)]);
+                K = Pbar*Htilde'/(Htilde*Pbar*Htilde' + Raug);
+                dxhat = dxbar + K*(dy - Htilde*dxbar);
+    
+                M = (eye(length(Xref0)) - K*Htilde);
+                Phat = M*Pbar*M' + K*Raug*K';
+    
+                % Post-fit residuals
+                dYpost(:,icurr,stations) = reshape(dy - Htilde* dxhat, [2,1,num_station]);
                   
         
                 % Record estimates and update for next iteration
@@ -79,15 +91,18 @@ classdef Filter_CKF_alt < Filter
             % Finish time update for rest of time if needed
             if iprev < length(tdata)
                 % Integrate Trajectory
-                [Xref, Phi] = obj.dyn_model.integrate_eomwPhi(tdata(iprev:icurr, Xstar_prev));        
+                [Xref, Phiref] = dyn_model.integrate_eomwPhi(tdata(iprev:end), Xstar_prev);
                 
                 % Time update from previous observation
                 j = 1;
                 while j + iprev <= length(tdata)
-                    Xhist(:,iprev+j) = Xref(:,j);
-                    Phist(:,:,iprev+j) = Phi(:,:,j)*Phat_prev*Phi(:,:,j)';
+                    Xhist(:,iprev+j) = Xref(:,j+1);
+                    Phi = Phiref(:,:,j+1)/Phiref(:,:,j);
+                    Phist(:,:,iprev+j) = Phi*Phist(:,:,iprev+j-1)*Phi' + ...
+                        dyn_model.process_noise_covariance(tdata(iprev+j)-tdata(iprev+j-1), Xref(:,j));
                     j = j+1;
                 end
+
             end
         end
     end

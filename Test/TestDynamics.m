@@ -2,6 +2,7 @@ classdef TestDynamics < matlab.unittest.TestCase
 
     methods (TestClassSetup)
         % Shared setup for the entire test class
+        
     end
 
     methods (TestMethodSetup)
@@ -15,7 +16,7 @@ classdef TestDynamics < matlab.unittest.TestCase
             load("Test/test_dynamics.mat",  "X0", "dx0", "teval", "Phi", "Xhist", "XhistPhi");
             addpath("./..")
 
-            params = struct('mu', Constants.MU, 'J2', Constants.J2, 'J3', 0);
+            params = struct('mu', Constants.MU, 'J2', Constants.J2, 'J3', 0, 'RE', Constants.RE);
             
             model = DynamicsModel_J2J3(params, 6); 
             Xhist_out = model.integrate_eom(teval, X0+dx0);
@@ -41,7 +42,7 @@ classdef TestDynamics < matlab.unittest.TestCase
             load("Test/test_dynamicsJ3.mat",  "X0", "dx0", "teval", "Phi", "Xhist", "XhistPhi");
             addpath("./..")
 
-            params = struct('mu', Constants.MU, 'J2', Constants.J2, 'J3', Constants.J3);
+            params = struct('mu', Constants.MU, 'J2', Constants.J2, 'J3', Constants.J3, 'RE', Constants.RE);
             
             model = DynamicsModel_J2J3(params, 6); 
             Xhist_out = model.integrate_eom(teval, X0+dx0);
@@ -61,6 +62,17 @@ classdef TestDynamics < matlab.unittest.TestCase
             testCase.verifyEqual(XhistPhi_out(1:3,:), XhistPhi(1:3,:), 'RelTol', 1e-9, 'AbsTol', 1e-6)
             testCase.verifyEqual(XhistPhi_out(4:6,:), XhistPhi(4:6,:), 'RelTol', 1e-9, 'AbsTol', 1e-9)
 
+        end
+
+        function testHW1(testCase)
+            addpath("./..")
+            sol_1c = jsondecode(fileread('HW1/prob1c_solution.json'));
+            state = sol_1c.inputs.state;
+            params = struct('mu', state.mu, 'J2',state.J2, 'J3', state.J3, 'RE', 6378);
+            
+            model = DynamicsModel_J2J3(params, 6); 
+            A_matrix = model.dfdx([state.r; state.v]);
+            testCase.verifyEqual(A_matrix, sol_1c.outputs.A_matrix.values(1:6,1:6), 'RelTol', 2e-14)
         end
     end
 

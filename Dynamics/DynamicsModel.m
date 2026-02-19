@@ -10,7 +10,13 @@ classdef (Abstract) DynamicsModel < handle
         integrate_eomwPhi(obj, teval, X0)
 
         % Get process noise covariance inflation
-        process_noise_covariance(obj) 
+        process_noise_covariance(obj, dt, X) 
+
+        % Equations of motion
+        eom(obj, t, X)
+
+        % Partials matrix
+        dfdx(obj, X)
 
     end
 end

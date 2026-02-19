@@ -2,14 +2,14 @@ clear
 
 sma = 10e3;
 ecc = 0.001;
-inc = 45;
+inc = 40;
 raan = 80;
 argp = 40;
 tanom = 0;
 
 
 X0 = oscelt2cart(sma, ecc, inc, raan, argp, tanom, Constants.MU);
-dx0 = [0.25; -0.25; 0.25; -5e-4; 5e-4; 5e-4];
+dx0 = [0.1; -0.1; 0.1; -1e-4; 1e-4; 0];
 
 Phat0 = diag([ones([3,1]); 1e-3^2*ones([3,1])]);
 
@@ -23,14 +23,14 @@ for i = 1:3
 end
 
 period = 2*pi*sqrt(sma^3/Constants.MU);
-tdata = 0:10:period*5;
+tdata = 0:10:period*15;
 dyn_params = struct('mu', Constants.MU, 'J2', Constants.J2, 'J3', Constants.J3);
 dyn_model = DynamicsModel_J2J3(dyn_params, 6);
-meas_model = MeasurementModel_RRR(Rsi, 6);
+meas_model = MeasurementModel_RRR(Rsi, R);
 
 tic
 Xtrue = dyn_model.integrate_eom(tdata, X0+dx0);
-Ydata = meas_model.simulate_measure(tdata, Xtrue, R, 10);
+Ydata = meas_model.simulate_measure(tdata, Xtrue, 10);
 toc
 
-save("HW3/hw3_data.mat", "tdata", "Ydata", "X0", "Xtrue", "dx0", "Rsi", "Phat0", "R");
+save("HW3/hw3_data.mat", "tdata", "Ydata", "X0", "Xtrue", "dx0", "Rsi", "Phat0", "R", "period");
