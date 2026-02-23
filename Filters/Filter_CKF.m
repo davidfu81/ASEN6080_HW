@@ -33,7 +33,7 @@ classdef Filter_CKF < Filter
                         Phi = Phiref(:,:,i)/Phiref(:,:,i-1);
                         dt = tdata(i) - tdata(i-1);
                         dxbar = Phi*dxhat_prev;
-                        Pbar = Phi*Phat_prev*Phi' + dyn_model.process_noise_covariance(dt, Xref(:,i-1));
+                        Pbar = Phi*Phat_prev*Phi' + dyn_model.process_noise_covariance(dt, Xref(:,i-1)+dxhat_prev);
                     end
                     
             

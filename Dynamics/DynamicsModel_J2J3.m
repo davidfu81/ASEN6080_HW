@@ -45,7 +45,7 @@ classdef DynamicsModel_J2J3 < DynamicsModel
 
         function dXdt = eom(obj, t, X)
             % X = [r; v]
-            RE = Constants.RE;
+            RE = obj.dyn_params.RE;
             mu = obj.dyn_params.mu;
             J2 = obj.dyn_params.J2;
             J3 = obj.dyn_params.J3;
