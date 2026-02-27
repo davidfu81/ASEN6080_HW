@@ -83,11 +83,18 @@ classdef Filter_Batch < Filter
             end
         
             % Get full state and covariance history from final estimate
-            [Xhist, Phi] = dyn_model.integrate_eomwPhi(tdata, X0);
+            % [Xhist, Phi] = dyn_model.integrate_eomwPhi(tdata, X0);
+            % Phist = zeros([length(Xref0), length(Xref0), length(tdata)]);
+            % for i = 1:length(tdata)
+            %     Phii = Phi(:,:,i);
+            %     Phist(:,:,i) = Phii*P0_new*Phii';
+            % end
+            Xhist = zeros([length(Xref0), length(tdata)]);
             Phist = zeros([length(Xref0), length(Xref0), length(tdata)]);
             for i = 1:length(tdata)
                 Phii = Phi(:,:,i);
                 Phist(:,:,i) = Phii*P0_new*Phii';
+                Xhist(:,i) = Xstar(:,i) + Phii*dxhat0;
             end
             
         end
