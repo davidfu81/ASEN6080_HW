@@ -22,8 +22,8 @@ classdef DynamicsModel_SNC < DynamicsModel
         function [Xsim, Phi] = integrate_eomwPhi(obj, teval, X0)
             [Xsim, Phi] = obj.base_dyn_model.integrate_eomwPhi(teval, X0);
         end
-
-        function Q = process_noise_covariance(obj, dt, X)
+        
+        function Q_pn_eci = process_noise(obj, X)
             if obj.frame == "RIC"
                 C_ric2eci = ric2eci(X);
                 Q_pn_eci = C_ric2eci*obj.Q_pn*C_ric2eci';
@@ -32,8 +32,17 @@ classdef DynamicsModel_SNC < DynamicsModel
             else
                 error("Unrecognized SNC frame %s", obj.frame)
             end
-            Q = dt^2*[dt^2/4*Q_pn_eci, dt/2*Q_pn_eci;
-                dt/2*Q_pn_eci, Q_pn_eci];
+        end
+
+        function Gamma = gamma(~, dt)
+            Gamma = dt*[dt/2*eye(3); eye(3)];
+        end
+
+
+        function GQG = process_noise_covariance(obj, dt, X)
+            Q = obj.process_noise(X);
+            Gamma = obj.gamma(dt);
+            GQG = Gamma*Q*Gamma';
         end
 
         function obj = set_Q(obj, sig_x, sig_y, sig_z, frame)
