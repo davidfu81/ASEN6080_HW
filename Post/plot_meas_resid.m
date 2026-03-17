@@ -29,6 +29,12 @@ function [fig_resid, ax_resid, rms_resid] = plot_meas_resid(tdata, yresid, title
         ylabel(sprintf("%s [%s]", components(i), units(i)))
         rms_resid(i) = sqrt(mean(yresid(i,:,:).^2, [2, 3], 'omitnan'));
         title(sprintf("RMS: %.3e %s", rms_resid(i), units(i) ))
+        
+        first_meas = find(any(~isnan(yresid(i,:,:)), 3), 1);
+        y_min = min(min(yresid(i,first_meas+1:end,:)));
+        y_max = max(max(yresid(i,first_meas+1:end,:)));
+        buffer = 0.05 * (y_max - y_min);
+        ylim([y_min - buffer, y_max + buffer]);
     end
     xlabel("Time [s]")
     lgd_labels = strings([1, size(yresid, 3)]);

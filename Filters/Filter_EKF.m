@@ -46,38 +46,40 @@ classdef Filter_EKF < Filter
                 
                 % Time update from previous observation
                 j = 1;
-                while j + iprev < icurr
-                    Xhist(:,iprev+j) = Xref(:,j+1);
-                    Phist(:,:,iprev+j) = Phi(:,:,j+1)*Phat_prev*Phi(:,:,j+1)' + ...
-                        dyn_model.process_noise_covariance(tdata(iprev+j)-tdata(iprev));
+                while j + iprev <= icurr
+                    Xstar = Xref(:,j+1);
+                    Pbar = Phi(:,:,j+1)*Phat_prev*Phi(:,:,j+1)';
+                    if tdata(iprev+j) - tdata(iprev) < 100
+                        Pbar = Pbar + dyn_model.process_noise_covariance(tdata(iprev+j)-tdata(iprev), Xstar);
+                    end
+
+                    Xhist(:,iprev+j) = Xstar;
+                    Phist(:,:,iprev+j) = Pbar;
                     j = j+1;
                 end
-                Pbar = Phi(:,:,end)*Phat_prev*Phi(:,:,end)' + ...
-                    dyn_model.process_noise_covariance(tdata(end)-tdata(end-1));
-                Xstar = Xref(:, end);
         
                 % Measurement Update
-                    % Identify visible stations
-                    stations = find(~isnan(Ydata(1,icurr,:)));
-                    num_station = length(stations);
-        
-                    Y = reshape(Ydata(:,icurr,stations), [2*num_station,1]);
-                    Ystar = meas_model.measure(tdata(icurr), Xstar, stations);
-        
-                    Htilde = meas_model.Htilde(tdata(icurr), Xstar, stations);
-                    
-                    Raug = kron(eye(num_station), meas_model.R);
-        
-                    dy = Y - Ystar;
-                    dYpre(:,icurr,stations) = reshape(dy, [2,1,num_station]);
-                    K = Pbar*Htilde'/(Htilde*Pbar*Htilde' + Raug);
-                    dxhat = K*dy;
-        
-                    M = (eye(n_state) - K*Htilde);
-                    Phat = M*Pbar*M' + K*Raug*K';
-        
-                    % Post-fit residuals
-                    dYpost(:,icurr,stations) = reshape(dy - Htilde* dxhat, [2,1,num_station]);
+                % Identify visible stations
+                stations = find(~isnan(Ydata(1,icurr,:)));
+                num_station = length(stations);
+    
+                Y = reshape(Ydata(:,icurr,stations), [2*num_station,1]);
+                Ystar = meas_model.measure(tdata(icurr), Xstar, stations);
+    
+                Htilde = meas_model.Htilde(tdata(icurr), Xstar, stations);
+                
+                Raug = kron(eye(num_station), meas_model.R);
+    
+                dy = Y - Ystar;
+                dYpre(:,icurr,stations) = reshape(dy, [2,1,num_station]);
+                K = Pbar*Htilde'/(Htilde*Pbar*Htilde' + Raug);
+                dxhat = K*dy;
+    
+                M = (eye(n_state) - K*Htilde);
+                Phat = M*Pbar*M' + K*Raug*K';
+    
+                % Post-fit residuals
+                dYpost(:,icurr,stations) = reshape(dy - Htilde* dxhat, [2,1,num_station]);
                   
         
                 % Record estimates and update for next iteration
@@ -90,18 +92,18 @@ classdef Filter_EKF < Filter
             end
         
             % Finish time update for rest of time if needed
-            if iprev < length(tdata)
-                % Integrate Trajectory
-                [Xref, Phi] = dyn_model.integrate_eomwPhi(tdata(iprev:icurr, Xstar_prev));        
-                
-                % Time update from previous observation
-                j = 1;
-                while j + iprev <= length(tdata)
-                    Xhist(:,iprev+j) = Xref(:,j);
-                    Phist(:,:,iprev+j) = Phi(:,:,j)*Phat_prev*Phi(:,:,j)';
-                    j = j+1;
-                end
-            end
+            % if iprev < length(tdata)
+            %     % Integrate Trajectory
+            %     [Xref, Phi] = dyn_model.integrate_eomwPhi(tdata(iprev:icurr, Xstar_prev));        
+            % 
+            %     % Time update from previous observation
+            %     j = 1;
+            %     while j + iprev <= length(tdata)
+            %         Xhist(:,iprev+j) = Xref(:,j);
+            %         Phist(:,:,iprev+j) = Phi(:,:,j)*Phat_prev*Phi(:,:,j)';
+            %         j = j+1;
+            %     end
+            % end
         end
     end
 

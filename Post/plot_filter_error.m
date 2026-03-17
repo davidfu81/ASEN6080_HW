@@ -35,8 +35,9 @@ function [fig_error, ax_error] = plot_filter_error(tdata, xest, Pest, xtrue, tit
         plot(tdata, 3*sigma, 'LineStyle', '--', ...
             'Color', 'red');
         ylabel(sprintf("%s Error [%s]", components(i), units(i)))
-        if max(3*sigma) > max(abs(errorsi))*50
-            ylim([-max(abs(errorsi))*1.25, max(abs(errorsi))*1.25])
+
+        if max(3*sigma) > max(abs(errorsi))*3
+            ylim([-mean(abs(errorsi))*5, mean(abs(errorsi))*5])
         end
     end
     xlabel("Time [s]")

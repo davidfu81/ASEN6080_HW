@@ -1,4 +1,4 @@
-classdef (Abstract) Filter
+classdef (Abstract) Filter < handle
 
     properties
 
