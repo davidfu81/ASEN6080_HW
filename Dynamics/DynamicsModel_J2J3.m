@@ -4,6 +4,7 @@ classdef DynamicsModel_J2J3 < DynamicsModel
         n_state
 
         dyn_params
+        
     end
     methods (Access = public)
         function obj = DynamicsModel_J2J3(dyn_params, n_state)
@@ -36,6 +37,30 @@ classdef DynamicsModel_J2J3 < DynamicsModel
             Phi = zeros(obj.n_state,obj.n_state, length(teval));
             for i = 1:length(teval)
                 Phi(:,:,i) = reshape(Xaug(obj.n_state+1:end,i), [obj.n_state,obj.n_state]);
+            end
+        end
+
+        function [Xsim, Phi, Theta, Psi] = integrate_eomwPhiTheta(obj, teval, X0, consider_params)
+            n = obj.n_state;
+            m = length(consider_params);
+
+            opts = odeset('RelTol',1e-12, 'AbsTol', 1e-9);
+
+            Phi0 = eye(n);
+            Theta0 = zeros([n,1]);
+            Xaug0 = [X0; reshape(Phi0, [n^2,1]); reshape(Theta0, [n*m,1])];
+            sol = ode45(@(t,y) obj.eomwPhiTheta(t,y, consider_params), ...
+                [teval(1), teval(end)], Xaug0, opts);
+            Xaug = deval(sol, teval);
+            Xsim = Xaug(1:n,:);
+        
+            Phi = zeros(n,n, length(teval));
+            Theta = zeros(n,m, length(teval));
+            Psi = zeros(n+m, n+m, length(teval));
+            for i = 1:length(teval)
+                Phi(:,:,i) = reshape(Xaug(n+1:n+n^2,i), [n,n]);
+                Theta(:,:,i) = reshape(Xaug(n+n^2+1:n+n^2+n*m,i), [n,m]);
+                Psi(:,:,i) = [Phi(:,:,i), Theta(:,:,i); zeros(m, n), eye(m)];
             end
         end
 
@@ -113,6 +138,27 @@ classdef DynamicsModel_J2J3 < DynamicsModel
         
         end
 
+        function B_matrix = dfdc(obj, X, consider_params)
+            
+            RE = obj.dyn_params.RE;
+            mu = obj.dyn_params.mu;
+            z  = X(3);
+            r = norm(X(1:3));
+
+            B_matrix = zeros([length(X), length(consider_params)]);
+            
+            for i = 1:length(consider_params)
+                if consider_params(i) == "J3"
+                    %da/dJ3
+                    B_matrix(4:6,i) = 1/2*mu*RE^3 * ...
+                        [(35*z^3/r^9-15*z/r^7)*X(1); ...
+                        (35*z^3/r^9-15*z/r^7)*X(2); ...
+                        (35*z^4/r^9-30*z^2/r^7+3/r^5)];
+                end
+            end
+            
+        end
+
         function dXaugdt = eomwPhi(obj, t, Xaug)
             %%%%%%
             % Xaug is length (n^2 + n) where n is number of states
@@ -127,6 +173,28 @@ classdef DynamicsModel_J2J3 < DynamicsModel
             phidot = A*phi;
         
             dXaugdt(obj.n_state+1:end) = reshape(phidot, [obj.n_state^2,1]);
+        end
+
+        function dXaugdt = eomwPhiTheta(obj, t, Xaug, consider_params)
+            n = obj.n_state;
+            m = length(consider_params);
+            dXaugdt = zeros(size(Xaug));
+            
+            % State evolution
+            dXaugdt(1:n) = obj.eom(t, Xaug(1:n));
+            
+            % Phi evolution
+            phi = reshape(Xaug(n+1:n^2+n), [n, n]);
+            A = obj.dfdx(Xaug(1:n));
+            phidot = A*phi;
+        
+            dXaugdt(n+1:n^2+n) = reshape(phidot, [n^2,1]);
+
+            % Theta evolution
+            B = obj.dfdc(Xaug(1:n), consider_params);
+            theta = Xaug(n^2+n+1:n*m+n^2+n);
+            thetadot = A*theta + B;
+            dXaugdt(n^2+n+1:n*m+n^2+n) = reshape(thetadot, [n*m,1]);
         end
 
         

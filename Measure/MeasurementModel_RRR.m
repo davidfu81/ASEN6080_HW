@@ -54,7 +54,6 @@ classdef MeasurementModel_RRR < MeasurementModel
             for k = 1:num_station
             
                 [Rs, Vs] = CoordinateConverter.ecef2eci(teval, obj.Recef_stations(:,stations(k)));
-            
 
                 r = Xeval(1:3);
                 v = Xeval(4:6);
@@ -68,6 +67,10 @@ classdef MeasurementModel_RRR < MeasurementModel
 
            
             end
+        end
+
+        function Htilde_c = Htilde_c(obj, teval, Xeval, stations, consider_params)
+            Htilde_c = zeros([2*length(stations), length(consider_params)]);
         end
 
         function Y = simulate_measure(obj, teval, Xeval, min_el)

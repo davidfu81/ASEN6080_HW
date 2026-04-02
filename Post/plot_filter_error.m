@@ -17,7 +17,7 @@ function [fig_error, ax_error] = plot_filter_error(tdata, xest, Pest, xtrue, tit
     
     for i = 1:size(xest,1)
         ax_error(i) = nexttile;
-        hold on; grid on;
+        hold on;
         ax = gca;
         ax.XAxis.Exponent = 0;
         ax.YAxis.Exponent = 0;
@@ -35,6 +35,7 @@ function [fig_error, ax_error] = plot_filter_error(tdata, xest, Pest, xtrue, tit
         plot(tdata, 3*sigma, 'LineStyle', '--', ...
             'Color', 'red');
         ylabel(sprintf("%s Error [%s]", components(i), units(i)))
+        grid on;
 
         if max(3*sigma) > max(abs(errorsi))*3
             ylim([-mean(abs(errorsi))*5, mean(abs(errorsi))*5])
